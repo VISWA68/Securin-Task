@@ -55,16 +55,46 @@ def insert_data(cpe_data):
     else:
         print("No data to insert.")
 
-#get_cpe_data()
+#get_cpe_data()  RUN THIS ONLY FOR THE FIRST TIME
 
-@app.route("/search", methods=["GET"])
+def comma_separated_params_to_list(param):
+    result = []
+    for val in param.split(','):
+        if val:
+            result.append(val)
+    return result
+
+@app.route("/search_data", methods=["GET"])
 def search():
-    search = request.args.get("search_by")
-    val = request.args.get("value")
+    search_data = {}
+
+    params = request.args.getlist('search') or request.form.getlist('search')
+    if len(params) == 1 and ',' in params[0]:
+        search_data['search'] = comma_separated_params_to_list(params[0])
+    else:
+        search_data['search'] = params
+    
+    params = request.args.getlist('value') or request.form.getlist('value')
+    if len(params) == 1 and ',' in params[0]:
+        search_data['value'] = comma_separated_params_to_list(params[0])
+    else:
+        search_data['value'] = params
+
+    s = search_data['search']
+    v = search_data['value']
+
     try:
-        item = mongo.db.cpe.find_one({f"{search}": val})
-        if not item:
-            return jsonify({"error": "item not found"}), 404
+        previous = mongo.db.cpe.find_one({f"{s[0]}": v[0]})
+        if not previous:
+                return jsonify({"error": "item not found"}), 404
+        
+        for i in range(len(s)):
+            search = s[i]
+            val = v[i]
+            print(f"Searching for {search} with value {val}",flush=True) 
+            item = mongo.db.cpe.find_one({f"{search}": val})
+            if not item or item != previous:
+                return jsonify({"error": "item not found"}), 404
         
         links = []
         for i in item.get("reference_links", []):
