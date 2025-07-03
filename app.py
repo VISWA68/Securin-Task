@@ -3,6 +3,8 @@ from flask_cors import CORS
 from flask_pymongo import PyMongo
 import datetime
 import xml.etree.ElementTree as ET
+from bson import json_util, ObjectId
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -55,8 +57,8 @@ def insert_data(cpe_data):
 
 #get_cpe_data()
 
-@app.route("/get_by_title", methods=["GET"])
-def get_by_title():
+@app.route("/search", methods=["GET"])
+def search():
     search = request.args.get("search_by")
     val = request.args.get("value")
     try:
@@ -80,26 +82,18 @@ def get_by_title():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-@app.route("/get_by_title", methods=["GET"])
-def get_by_title():
-    search = request.args.get("search_by")
-    val = request.args.get("value")
+@app.route("/pagination", methods=["GET"])
+def pagination():
+    page = int(request.args.get("page")) if request.args.get("page") else 1
+    limit = int(request.args.get("limit")) if request.args.get("limit") else 10
+    cnt = (page - 1) * limit
     try:
-        item = mongo.db.cpe.find_one({f"{search}": val})
-        if not item:
-            return jsonify({"error": "item not found"}), 404
-        
-        links = []
-        for i in item.get("reference_links", []):
-            links.append(i)
-
+        data = list(mongo.db.cpe.find().skip(cnt).limit(int(limit)))
+        final = json.loads(json_util.dumps(data))
         return jsonify({
-            "cpe_title": item["cpe_title"],
-            "cpe_22_uri":item["cpe_22_uri"],
-            "cpe_23_uri": item["cpe_23_uri"],
-            "reference_links": links,
-            "cpe_22_deprecation_date": item["cpe_22_deprecation_date"],
-            "cpe_23_deprecation_date": item["cpe_23_deprecation_date"]
+            "page": page,
+            "limit": limit,
+            "data": final
         }), 200
 
     except Exception as e:
