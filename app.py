@@ -91,7 +91,6 @@ def search():
         for i in range(len(s)):
             search = s[i]
             val = v[i]
-            print(f"Searching for {search} with value {val}",flush=True) 
             item = mongo.db.cpe.find_one({f"{search}": val})
             if not item or item != previous:
                 return jsonify({"error": "item not found"}), 404
